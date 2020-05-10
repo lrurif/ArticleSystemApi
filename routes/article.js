@@ -113,6 +113,21 @@ router.post('/getArticleDetail',function(req, res, next) {
         res.json(data);
     })
   });
+//   点赞
+router.post('/likeArticle',(req,res,next)=> {
+    var sql = "";
+    if(req.body.type == 'cancel') {
+        sql = `delete from article_likes where article_id = ${req.body.article_id} And user_id = ${req.body.id}`;
+    }else {
+        sql = `INSERT INTO article_likes(article_id,user_id) values(${req.body.article_id},${req.body.id})`;
+    }
+    connection.query(sql,(err,result)=> {
+        if(err) res.json({message:'失败'})
+        res.json({
+            message:'成功'
+        })
+    })
+})
 // 测试async异步
 //   router.post('/getArticle2',function(req, res, next) {
 //     const sql = `SELECT * FROM article LIMIT ${(req.body.page-1)*10},${(req.body.page-1)*10+10}`

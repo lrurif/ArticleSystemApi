@@ -1,13 +1,14 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var bodyParser = require('body-parser')
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const bodyParser = require('body-parser')
 
 var userRouter = require('./routes/user');
 var uploadRouter = require('./routes/img');
 var articleRouter = require('./routes/article')
+var  zhuanlanRouter = require('./routes/zhuanlan')
 var app = express();
 
 // view engine setup
@@ -41,6 +42,7 @@ app.all('*',function (req, res, next) {
 app.use('/user', userRouter);
 app.use('/upload', uploadRouter);
 app.use('/article', articleRouter);
+app.use('/zhuanlan', zhuanlanRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
