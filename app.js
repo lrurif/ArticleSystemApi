@@ -8,7 +8,8 @@ const bodyParser = require('body-parser')
 var userRouter = require('./routes/user');
 var uploadRouter = require('./routes/img');
 var articleRouter = require('./routes/article')
-var  zhuanlanRouter = require('./routes/zhuanlan')
+var zhuanlanRouter = require('./routes/zhuanlan')
+var focusRouter = require('./routes/focus')
 var app = express();
 
 // view engine setup
@@ -43,6 +44,7 @@ app.use('/user', userRouter);
 app.use('/upload', uploadRouter);
 app.use('/article', articleRouter);
 app.use('/zhuanlan', zhuanlanRouter);
+app.use('/focus', focusRouter)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
