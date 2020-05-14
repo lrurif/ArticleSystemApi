@@ -27,19 +27,10 @@ router.post('/get_article', function (req, res, next) {
     function get_person_article(result) {
         return new Promise((resolve, reject) => {
             var person_arr = [];
-            var zhuanlan_arr = [];
             result.userList.forEach((item, index) => {
-                delete item.userPassword;
-                delete item.registerTime;
-                delete item.sex;
-                delete item.status;
-                delete item.id;
                 person_arr.push(item.focus_person_id);
             })
-            result.zhuanlanList.forEach((item, index) => {
-                zhuanlan_arr.push(item.focus_zhuanlan_id);
-            })
-            var sql = `select * from article,user where (user_id in (${(person_arr.toString())}) or zhuanlan_id in (${zhuanlan_arr.toString()})) and user.id = article.user_id limit 10 `
+            var sql = `select * from article,user where (user_id in (${(person_arr.toString())}) ) and user.id = article.user_id limit 10 `
             console.log(sql)
             connection.query(sql, (err, res) => {
                 result.articleList = res;
@@ -73,8 +64,6 @@ router.post('/get_article', function (req, res, next) {
         return new Promise((resolve, reject) => {
             result.forEach((item, index) => {
                 let querySql = `SELECT * from article_likes where article_id = ${item.article_id} And user_id = ${id}`;
-                
-                delete item.article_content;
                 connection.query(querySql, (err, result2) => {
                     if (result2.length > 0) {
                         result[index].isLike = true;
@@ -105,6 +94,49 @@ router.post('/get_article', function (req, res, next) {
 
         })
     }
+    function getLikeNum(result) {
+        return new Promise((resolve, reject) => {
+            result.forEach((item, index) => {
+                let querySql = `SELECT count(*) as num from article_likes where article_id = ${item.article_id}`;
+                connection.query(querySql, (err, result2) => {
+                    if (err) return reject();
+                    result[index].article_like_num = result2[0].num;
+                    if (index == result.length - 1) {
+                        return resolve(result);
+                    }
+                })
+            })
+        })
+
+    }
+    function handleData(data) {
+        return new Promise((resolve,reject)=> {
+            data.userList.forEach(item=> {
+                delete item.zhuanlan_id;
+                delete item.status;
+                delete item.registerTime;
+                delete item.user_id;
+                delete item.userPassword;
+                delete item.sex;
+                delete item.realName;
+            })
+            data.zhuanlanList.forEach(item=> {
+                delete item.user_id;
+                delete item.zhuanlan_id;
+                delete item.zhuanlan_abstract;
+                // delete item.
+            })
+            data.articleList.forEach(item=> {
+                delete item.article_content;
+                delete item.id;
+                delete item.userPassword;
+                delete item.status;
+                delete item.registerTime;
+                delete item.sex;
+            })
+            resolve(data);
+        })
+    }
     async function getData() {
         var data = {};
         data = await get_focus_person(req.body.userId, data);
@@ -113,6 +145,8 @@ router.post('/get_article', function (req, res, next) {
         // data = await get_zhuanlan_article(data);
         data.articleList = await isLike(data.articleList, req.body.userId);
         data.articleList = await getCommentsNum(data.articleList);
+        data.articleList = await getLikeNum(data.articleList);
+        data = await handleData(data);
         return data;
     }
 
