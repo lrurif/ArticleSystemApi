@@ -31,7 +31,6 @@ router.post('/get_article', function (req, res, next) {
                 person_arr.push(item.focus_person_id);
             })
             var sql = `select * from article,user where (user_id in (${(person_arr.toString())}) ) and user.id = article.user_id limit 10 `
-            console.log(sql)
             connection.query(sql, (err, res) => {
                 result.articleList = res;
                 resolve(result);
@@ -83,7 +82,6 @@ router.post('/get_article', function (req, res, next) {
         return new Promise((resolve, reject) => {
             result.forEach((item, index) => {
                 let querySql = `SELECT count(*) as num from comments where article_id = ${item.article_id}`;
-                // console.log(querySql)
                 connection.query(querySql, (err, result2) => {
                     result[index].comments_num = result2[0].num;
                     if (index == result.length - 1) {

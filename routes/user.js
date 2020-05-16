@@ -29,9 +29,7 @@ router.post('/register', function (req, res, next) {
       });
     } else {
       let sql = `insert into user(userName,userPassword,realName) values('${req.body.userName}','${req.body.password}','${req.body.userName}')`;
-      console.log(sql)
       connection.query(sql, (err, result) => {
-        console.log(result);
         res.json({
           message: '注册成功'
         });
@@ -61,7 +59,6 @@ router.post('/getRecommend', function (req, res, next) {
       result.forEach((item,index)=> {
         var sql = `select count(*) as num from focus_person where focus_person_id = ${item.id}`;
         connection.query(sql,(err,res)=> {
-          console.log(res)
           item.focus_num = res[0].num;
           if(index == result.length-1) {
             resolve(result);

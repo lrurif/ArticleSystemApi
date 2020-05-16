@@ -5,7 +5,6 @@ const connection = require('./mysql.js')
 // 新增文章
 router.post('/add', function (req, res, next) {
     const sql = `INSERT INTO article(user_id,article_title,article_img,article_content,article_abstract) VALUES(${req.body.userId},'${req.body.title}','${req.body.img}','${req.body.content}','${req.body.abstract}')`;
-    console.log(sql);
     connection.query(sql, (err, result) => {
         if (err) {
             res.json({
@@ -28,8 +27,6 @@ router.post('/getArticle', function (req, res, next) {
         }else {
             sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and zhuanlan_id is null LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
         }
-        console.log(sql);
-       console.log()
         return new Promise((resolve, reject) => {
             connection.query(sql, (err, result) => {
                 resolve(result);
@@ -61,7 +58,6 @@ router.post('/getArticle', function (req, res, next) {
             result.forEach((item, index) => {
                 let querySql = `SELECT count(*) as num from comments where article_id = ${item.article_id}`;
                 connection.query(querySql, (err, result2) => {
-                    console.log(result2)
                     if (err) return reject();
                     result[index].comments_num = result2[0].num;
                     if (index == result.length - 1) {
@@ -106,7 +102,6 @@ router.post('/getArticle', function (req, res, next) {
 //   阅读量增加
 router.post('/addReadNums', function (req, res, next) {
     const sql = `UPDATE article SET article_reading = article_reading+1 WHERE article_id = ${req.body.id}`;
-    console.log(sql);
     connection.query(sql, (err, result) => {
         if (err) {
             res.json({
@@ -122,7 +117,6 @@ router.post('/addReadNums', function (req, res, next) {
 router.post('/getArticleDetail', function (req, res, next) {
     function getArticleDetail() {
         const sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id AND article_id = ${req.body.id}`;
-        console.log(sql);
         return new Promise((resolve, reject) => {
             connection.query(sql, (err, result) => {
                 if (err) return;
