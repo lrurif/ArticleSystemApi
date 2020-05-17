@@ -4,7 +4,8 @@ var connection  = mysql.createPool({
     host            : 'localhost',
     user            : 'root',
     password        : '123456',
-    database        : 'articlesystem'
+    database        : 'articlesystem',
+    timezone: "Asia/Shanghai"
   });
  
 module.exports = connection;
