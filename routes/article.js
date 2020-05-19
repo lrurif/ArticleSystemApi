@@ -16,7 +16,7 @@ router.post('/add', function (req, res, next) {
         });
     })
 });
-//   利用页码获取文章数据
+//   利用页码获取文章数据,(包括利用专栏来获取文章，利用作者来获取文章，以及随机推荐)
 router.post('/getArticle', function (req, res, next) {
     function getArticleData() {
         var sql = "";
@@ -25,7 +25,7 @@ router.post('/getArticle', function (req, res, next) {
         }else if(req.body.author_id){
             sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and zhuanlan_id is null and user_id = ${req.body.author_id} LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
         }else {
-            sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and zhuanlan_id is null LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
+            sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and zhuanlan_id is null order by rand() LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
         }
         return new Promise((resolve, reject) => {
             connection.query(sql, (err, result) => {
@@ -35,6 +35,7 @@ router.post('/getArticle', function (req, res, next) {
     }
     function isLike(result, id) {
         return new Promise((resolve, reject) => {
+            if(result.length==0)resolve(result);
             result.forEach((item, index) => {
                 let querySql = `SELECT * from article_likes where article_id = ${item.article_id} And user_id = ${id}`;
                 delete item.article_content;
@@ -55,6 +56,7 @@ router.post('/getArticle', function (req, res, next) {
     }
     function getCommentsNum(result) {
         return new Promise((resolve, reject) => {
+            if(result.length==0)resolve(result);
             result.forEach((item, index) => {
                 let querySql = `SELECT count(*) as num from comments where article_id = ${item.article_id}`;
                 connection.query(querySql, (err, result2) => {
@@ -70,6 +72,7 @@ router.post('/getArticle', function (req, res, next) {
     }
     function getLikeNum(result) {
         return new Promise((resolve, reject) => {
+            if(result.length==0)resolve(result);
             result.forEach((item, index) => {
                 let querySql = `SELECT count(*) as num from article_likes where article_id = ${item.article_id}`;
                 connection.query(querySql, (err, result2) => {

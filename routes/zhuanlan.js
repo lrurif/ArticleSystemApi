@@ -27,6 +27,7 @@ router.post('/add',function(req, res, next) {
         })
       })
     }
+    // 获取专栏关注数
     function getFocusNum(result) {
       return new Promise((resolve,reject)=> {
         result.forEach((item,index)=> {
@@ -41,6 +42,7 @@ router.post('/add',function(req, res, next) {
         
       })
     }
+    // 获取专栏文章数量
     function getArticleNum(result) {
       return new Promise((resolve,reject)=> {
         result.forEach((item,index)=> {
@@ -65,5 +67,26 @@ router.post('/add',function(req, res, next) {
     getRecommend().then(data=> {
       res.json(data);
     });
+  });
+  // 获取专栏详情
+  router.post('/getZhuanlanDetail',(req, res, next)=> {
+    var data = {};
+    function getZhuanlan() {
+        var sql = `SELECT * from zhuanlan where zhuanlan_id = '${req.body.id}'`;
+        connection.query(sql,(err,result)=> {
+          data.zhuanlan = result[0];
+        })
+    }
+    function getFocusNum() {
+      var sql = `SELECT count(*) as num from focus_zhuanlan where focus_zhuanlan_id = '${req.body.id}'`;
+      connection.query(sql,(err,result)=> {
+        data.focus_num = result[0].num;
+        data.code = 200;
+        data.message = 'success'
+        res.json(data);
+      })
+    }
+    getZhuanlan();
+    getFocusNum();
   });
   module.exports = router;
