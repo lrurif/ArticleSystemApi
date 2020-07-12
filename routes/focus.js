@@ -2,6 +2,7 @@ var express = require('express');
 var router = express.Router();
 const connection = require('./mysql.js')
 
+// 获取用户关注列表以及文章
 router.post('/get_article', function (req, res, next) {
     // 获取用户关注列表
     function get_focus_person(id, data) {
@@ -27,10 +28,15 @@ router.post('/get_article', function (req, res, next) {
     function get_person_article(result) {
         return new Promise((resolve, reject) => {
             var person_arr = [];
+            if(result.userList.length==0) {
+                result.articleList = [];
+                resolve(result);
+            }
             result.userList.forEach((item, index) => {
                 person_arr.push(item.focus_person_id);
             })
             var sql = `select * from article,user where (user_id in (${(person_arr.toString())}) ) and user.id = article.user_id limit 10 `
+            console.log(sql)
             connection.query(sql, (err, res) => {
                 result.articleList = res;
                 resolve(result);
@@ -38,29 +44,12 @@ router.post('/get_article', function (req, res, next) {
 
         })
     }
-
-    // 遍历专栏获取文章数据,已被覆盖
-    // function get_zhuanlan_article(result) {
-    //     return new Promise((resolve,reject)=> {
-    //         var arr = [];
-    //         result.zhuanlanList.forEach((item,index)=> {
-    //             arr.push(item.zhuanlan_id);
-    //         })
-    //         var sql = `select * from article where zhuanlan_id in (${(arr.toString())})`
-    //         connection.query(sql,(err,res)=> {
-    //             result.articleList = result.articleList.concat(res);
-    //             result.articleList = result.articleList.reduce((item,next) => {
-    //                 result.articleList[next.article_id] ? "" : result.articleList[next.article_id] = true && item.push(next);
-    //                 return item;
-    //             },[]);
-    //             resolve(result);
-    //         })
-
-    //     })
-    // }
     // 获取是否点赞
     function isLike(result, id) {
         return new Promise((resolve, reject) => {
+            if(result.length==0) {
+                return resolve(result);
+            }
             result.forEach((item, index) => {
                 let querySql = `SELECT * from article_likes where article_id = ${item.article_id} And user_id = ${id}`;
                 connection.query(querySql, (err, result2) => {
@@ -80,6 +69,9 @@ router.post('/get_article', function (req, res, next) {
     //   获取评论数量
     function getCommentsNum(result) {
         return new Promise((resolve, reject) => {
+            if(result.length==0) {
+                return resolve(result);
+            }
             result.forEach((item, index) => {
                 let querySql = `SELECT count(*) as num from comments where article_id = ${item.article_id}`;
                 connection.query(querySql, (err, result2) => {
@@ -92,8 +84,12 @@ router.post('/get_article', function (req, res, next) {
 
         })
     }
+    // 获取点赞数量
     function getLikeNum(result) {
         return new Promise((resolve, reject) => {
+            if(result.length==0) {
+                return resolve(result);
+            }
             result.forEach((item, index) => {
                 let querySql = `SELECT count(*) as num from article_likes where article_id = ${item.article_id}`;
                 connection.query(querySql, (err, result2) => {

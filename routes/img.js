@@ -12,7 +12,7 @@ var env = process.env.NODE_ENV || 'development';
 if ('development' === env) {
     baseUrl = "http://127.0.0.1:3000/"
 }else{
-    baseUrl = "http://101.201.152.125:8088/"
+    baseUrl = "http://101.201.152.125:3000/"
 }
 router.post('/single', upload.single('imageFile'), function (req, res, next) {
     if (req.file.length === 0) {  //判断一下文件是否存在，也可以在前端代码中进行判断。

@@ -127,8 +127,29 @@ router.post('/getArticleDetail', function (req, res, next) {
             })
         })
     }
+    // 获取文章是否被收藏
+    function isCollect() {
+        var sql = `select * from article_collection where article_id = ${req.body.id} and user_id = ${req.body.userId}`
+        return new Promise((resolve,reject)=> {
+            connection.query(sql, (err,result)=> {
+                return resolve(!!result.length>0);
+            })
+        })
+    }
+    // 获取文章是否被点赞
+    function isLike() {
+        var sql = `select * from article_likes where article_id = ${req.body.id} and user_id = ${req.body.userId}`
+        return new Promise((resolve,reject)=> {
+            connection.query(sql, (err,result)=> {
+                return resolve(!!result.length>0);
+            })
+        })
+    }
     async function getData() {
-        var result = await getArticleDetail();
+        var result;
+        result = await getArticleDetail();
+        result[0].isCollect = await isCollect();
+        result[0].isLike = await isLike();
         return result;
     }
     getData().then(data => {
@@ -150,44 +171,81 @@ router.post('/likeArticle', (req, res, next) => {
         })
     })
 })
-// 测试async异步
-//   router.post('/getArticle2',function(req, res, next) {
-//     const sql = `SELECT * FROM article LIMIT ${(req.body.page-1)*10},${(req.body.page-1)*10+10}`
-//     function getData(sql) {
-//         return new Promise((resolve,reject)=> {
-//             connection.query(sql,(err,result)=> {
-//                 if(err) return reject();
-//                 return resolve(result);
-//             })
-//         })
-//     }
-//     function getData2(result) {
-//         return new Promise((resolve,reject)=> {
-//             result.forEach((item,index)=> {
-//                 let querySql = `SELECT * from user where id = ${item.user_id}`;
-//                 connection.query(querySql,(err,result2)=> {
-//                     if(err) return reject();
-//                     result[index].author = result2[0].userName;
-//                     result[index].avatar = result2[0].avatar;
-//                     if(index==result.length-1) {
-//                         return resolve(result);
-//                     }
-//                 })
-//             })
-
-//         })
-//     }
-//     async function getAllData() {
-//         let result = await getData(sql);
-//         let result2 = await getData2(result);
-//        return result2;
-//     }
-//     getAllData().then(data=> {
-//         res.json(data);
-//     }).catch(err=> {
-//         res.json({
-//             message: '未知错误'
-//         })
-//     })
-// })
+// 获取可投稿的文章
+router.post('/getContributeArticle', (req, res, next) => {
+    var sql = `select article_id,article_title,article_time from article where user_id = ${req.body.user_id} and (zhuanlan_id != ${req.body.zhuanlan_id} or zhuanlan_id is null)`;
+    connection.query(sql, (err, result) => {
+        if (err) res.json({ message: '失败' })
+        res.json({
+            data: {
+                result
+            },
+            message: '成功'
+        })
+    })
+})
+// 获取浏览历史
+router.post('/getBrowsingArticle', (req, res, next) => {
+    var sql = `select article.article_title,article.article_id,browsing_history.browsing_time from article,browsing_history where browsing_history.user_id=${req.body.userId} and article.article_id = browsing_history.article_id order by browsing_time desc LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
+    console.log(sql)
+    connection.query(sql, (err, result) => {
+        if (err) res.json({ message: '失败' })
+        res.json({
+            length: result.length,
+            data: result,
+            message: '成功'
+        })
+    })
+})
+// 新增浏览历史或修改浏览历史时间
+router.post('/addBrowsingHistory', (req, res, next) => {
+    var sql = `select * from browsing_history where user_id = ${req.body.userId} and article_id = ${req.body.articleId}`;
+    console.log(sql)
+    connection.query(sql, (err, result) => {
+        if (err) res.json({ message: '失败' })
+        if(result.length>0) {
+            update();
+        }else {
+            add();
+        }
+    })
+    function add() {
+        var sql = `INSERT into browsing_history(user_id,article_id) values(${req.body.userId},${req.body.articleId})`;
+        connection.query(sql, (err, result) => {
+            if (err) res.json({ message: '失败' })
+            res.json({message: '成功'});
+        })
+    }
+    function update() {
+        var sql = `update browsing_history set browsing_time = now() where user_id = ${req.body.userId} and article_id = ${req.body.articleId}`;
+        connection.query(sql, (err, result) => {
+            if (err) res.json({ message: '失败' })
+            res.json({message: '成功'});
+        })
+    }
+})
+// 收藏文章
+router.post('/addCollection', (req, res, next) => {
+    var sql = `INSERT into article_collection(user_id,article_id) values(${req.body.userId},${req.body.articleId})`;
+    console.log(sql)
+    connection.query(sql, (err, result) => {
+        if (err) res.json({ message: '失败' })
+        res.json({
+            length: result.length,
+            message: '成功'
+        })
+    })
+})
+// 取消收藏文章
+router.post('/cancelCollection', (req, res, next) => {
+    var sql = `delete from  article_collection where user_id = ${req.body.userId} and article_id = ${req.body.articleId}`;
+    console.log(sql)
+    connection.query(sql, (err, result) => {
+        if (err) res.json({ message: '失败' })
+        res.json({
+            length: result.length,
+            message: '成功'
+        })
+    })
+})
 module.exports = router;
