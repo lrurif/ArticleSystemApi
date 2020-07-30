@@ -11,6 +11,7 @@ var articleRouter = require('./routes/article')
 var zhuanlanRouter = require('./routes/zhuanlan')
 var focusRouter = require('./routes/focus')
 var collectRouter = require('./routes/collect')
+var commentRouter = require('./routes/comment')
 var app = express();
 
 // view engine setup
@@ -47,6 +48,7 @@ app.use('/article', articleRouter);
 app.use('/zhuanlan', zhuanlanRouter);
 app.use('/focus', focusRouter)
 app.use('/collect',collectRouter)
+app.use('/comment',commentRouter)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

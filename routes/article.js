@@ -203,7 +203,7 @@ router.post('/addBrowsingHistory', (req, res, next) => {
     console.log(sql)
     connection.query(sql, (err, result) => {
         if (err) res.json({ message: '失败' })
-        if(result.length>0) {
+        if(result.length > 0) {
             update();
         }else {
             add();
@@ -245,6 +245,24 @@ router.post('/cancelCollection', (req, res, next) => {
         res.json({
             length: result.length,
             message: '成功'
+        })
+    })
+})
+// 获取可投稿文章
+router.post('/getSubmitArticle', (req, res, next) => {
+    var sql = "";
+    if(req.body.search_word) {
+        sql = `select article_id, article_title from article where article_title like '%${req.body.search_word}%' and user_id = '${req.body.user_id}' and (zhuanlan_id != '${req.body.zhuanlan_id}' || zhuanlan_id is null)`;
+    }else {
+        sql = `select article_id, article_title from article where user_id = '${req.body.user_id}' and (zhuanlan_id != '${req.body.zhuanlan_id}' || zhuanlan_id is null)`;
+    }
+    console.log(sql);
+    connection.query(sql, (err, result) => {
+        if (err) res.json({ message: '失败' })
+        res.json({
+            length: result.length,
+            message: '成功',
+            data: result
         })
     })
 })

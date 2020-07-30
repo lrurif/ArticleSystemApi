@@ -6,7 +6,7 @@ const connection = require('./mysql.js')
 router.post('/add', function (req, res, next) {
   const sql = `INSERT INTO zhuanlan(zhuanlan_name,zhuanlan_img,zhuanlan_abstract) values('${req.body.title}','${req.body.img}','${req.body.abstract}')`;
   connection.query(sql, (err, result) => {
-    if (result && result.length > 0) {
+    if (result.affectedRows) {
       res.json({
         message: 'success',
       });
@@ -138,6 +138,22 @@ router.post('/focus', function (req, res, next) {
     })
 
 
+  })
+});
+// 专栏新增文章
+router.post('/addArticle', function (req, res, next) {
+  const sql = `UPDATE article SET zhuanlan_id = '${req.body.zhuanlan_id}' where article_id = '${req.body.article_id}'`;
+  console.log(sql)
+  connection.query(sql, (err, result) => {
+    if (result.affectedRows) {
+      res.json({
+        message: 'success',
+      });
+    } else {
+      res.json({
+        message: 'fail'
+      })
+    }
   })
 });
 module.exports = router;

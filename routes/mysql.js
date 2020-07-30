@@ -5,7 +5,8 @@ var connection  = mysql.createPool({
     user            : 'root',
     password        : '123456',
     database        : 'articlesystem',
-    timezone: "Asia/Shanghai"
+    timezone: "Asia/Shanghai",
+    multipleStatements: true
   });
  
 module.exports = connection;

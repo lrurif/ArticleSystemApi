@@ -10,6 +10,7 @@ router.post('/login', function (req, res, next) {
         message: 'success',
         id: result[0].id,
         userName: result[0].realName,
+        avatar: result[0].avatar
       });
     } else {
       res.json({
