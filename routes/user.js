@@ -181,7 +181,7 @@ router.post('/editInfo', function(req,res,next) {
 // 微信登录
 router.post("/wxLogin", function(req, res, next) {
   // console.log(fetch);
-  let appId = "wx9a3a750db3329941", secret = "b2897dba9d40e9fd2209bc9b83788de4",code = req.body.userName;
+  let appId = "*******", secret = "*******",code = req.body.userName;
   axios.get('https://api.weixin.qq.com/sns/jscode2session?appid=' + appId + '&secret=' + secret + '&js_code=' + code + '&grant_type=authorization_code').then(wx_res=> {
     var userInfo = {};
     function hasUser(userName) {
