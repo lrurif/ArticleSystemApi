@@ -1,6 +1,8 @@
 var express = require('express');
 var router = express.Router();
-const connection = require('./mysql.js')
+var axios = require("axios")
+const connection = require('./mysql.js');
+// const { delete } = require('./focus.js');
 /* GET users listing. */
 router.post('/login', function (req, res, next) {
   const sql = `select * from user where userName = '${req.body.userName}' And userPassword = '${req.body.password}'`;
@@ -149,11 +151,21 @@ router.post('/getUserInfoById', function (req, res, next) {
       })
     })
   }
+  function isFocus(myId, id) {
+    var sql = `select * from focus_person where user_id = ${myId} and focus_person_id = ${id}`;
+    return new Promise((resolve,rejcet) => {
+      connection.query(sql, (err,result) => {
+        data.isFocus = result.length>0;
+        return resolve(data);
+      })
+    })
+  }
   async function getInfo(id) {
     data = await getBasicInfo(id);
     data = await getFocusNum(id);
     data = await getFansNum(id);
     data = await getArticleNum(id);
+    data = await isFocus(req.body.id, id);
   }
   getInfo(id).then(()=> {
     res.json(data);
@@ -164,6 +176,106 @@ router.post('/editInfo', function(req,res,next) {
   var sql = `update user set realName = '${req.body.realName}',sex = '${req.body.sex}',avatar = '${req.body.avatar||''}',introduction = '${req.body.introduction}' where id = ${req.body.id}`;
   connection.query(sql, (err,result)=> {
     res.json("13")
+  })
+})
+// 微信登录
+router.post("/wxLogin", function(req, res, next) {
+  // console.log(fetch);
+  let appId = "wx9a3a750db3329941", secret = "b2897dba9d40e9fd2209bc9b83788de4",code = req.body.userName;
+  axios.get('https://api.weixin.qq.com/sns/jscode2session?appid=' + appId + '&secret=' + secret + '&js_code=' + code + '&grant_type=authorization_code').then(wx_res=> {
+    var userInfo = {};
+    function hasUser(userName) {
+      return new Promise((resolve, reject)=> {
+        var sql = `select * from user where userName = '${userName}'`;
+        connection.query(sql, (err, result)=> {
+          if(result.length !== 0) {
+            userInfo.userId = result[0].id;
+            userInfo.realName = result[0].realName;
+          }
+          resolve(userInfo);
+        })
+      })
+    }
+    function insertUser(userName, realName, avatar) {
+      return new Promise((resolve, reject)=> {
+        var sql = `Insert into user (userName,realName,avatar) values ('${userName}','${realName}','${avatar}')`;
+        connection.query(sql, (err, result)=> {
+          userInfo.userId = result.insertId;
+          userInfo.realName = realName;
+          resolve(userInfo);
+        })
+      })
+    }
+    async function wxLogin(userName, realName, avatar) {
+      userInfo = await hasUser(userName);
+      if(!userInfo.userId) {
+        userInfo = await insertUser(userName, realName, avatar);
+      }
+      return userInfo;
+    }
+    wxLogin(wx_res.data.openid, req.body.realName, req.body.avatar).then(result=> {
+      res.json(result);
+    })
+  })
+  
+})
+router.post("/getUserBySearch", function(req, res, next) {
+  var data = {};
+  function getBasicInfo(search_word) {
+    var sql = `select * from user where realName like '%${search_word}%'`;
+    console.log(sql)
+    return new Promise((resolve,rejcet) => {
+      connection.query(sql, (err,result) => {
+        return resolve(result);
+      })
+    })
+  }
+  // 获取被关注数量
+  function getFocusNum(result) {
+      let arr = []
+      result.forEach((item,index)=> {
+        arr.push(new Promise((resolve, reject)=> {
+          delete item.userPassword;
+          delete item.registerTime;
+          delete item.status;
+          var sql = `select count(*) as num from focus_person where focus_person_id = ${item.id}`;
+          connection.query(sql, (err,result) => {
+            item.focusNum = result[0].num;
+            return resolve();
+          })
+        }))
+      })
+      return new Promise((resolve,reject)=> {
+        Promise.all(arr).then(()=> {
+            resolve(result);
+        })
+    })
+  }
+  function getArticleNum(result) {
+    let arr = []
+    result.forEach((item,index)=> {
+      arr.push(new Promise((resolve, reject)=> {
+        var sql = `select count(*) as num from article where user_id = ${item.id}`;
+        connection.query(sql, (err,result) => {
+          item.articleNum = result[0].num;
+          return resolve();
+        })
+      }))
+    })
+    return new Promise((resolve,reject)=> {
+      Promise.all(arr).then(()=> {
+          resolve(result);
+      })
+  })
+}
+  async function getData() {
+    let data = await getBasicInfo(req.body.search_word);
+    data = await getFocusNum(data);
+    data = await getArticleNum(data);
+    return data;
+  }
+  getData().then(resData=> {
+    res.json(resData)
   })
 })
 module.exports = router;

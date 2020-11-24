@@ -47,8 +47,8 @@ router.post('/getAllComments', function (req, res, next) {
                 connection.query(sql, (err, result) => {
                     item.children = result[0];
                     item.sender = result[1][0];
+                    console.log(sql)
                     item.isThumbUp = result[2].length?true:false;
-                    console.log(result[3])
                     item.thumbUpNum = result[3][0].num;
                     resolve();
                   })

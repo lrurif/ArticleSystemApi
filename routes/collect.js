@@ -6,7 +6,6 @@ const connection = require('./mysql.js')
 router.post('/getCollectArticle', function (req, res, next) {
     function getArticleData() {
         var sql = `select * from article,article_collection,user where article.user_id = user.id and article_collection.user_id = ${req.body.userId} and article.article_id = article_collection.article_id  LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
-        console.log(sql)
         return new Promise((resolve, reject) => {
             connection.query(sql, (err, result) => {
                 resolve(result);
@@ -18,13 +17,15 @@ router.post('/getCollectArticle', function (req, res, next) {
             if(result.length==0)resolve(result);
             result.forEach((item, index) => {
                 let querySql = `SELECT * from article_likes where article_id = ${item.article_id} And user_id = ${id}`;
-                delete item.article_content;
                 delete item.userPassword;
                 delete item.sex;
                 delete item.status;
                 delete item.registerTime;
                 item.user_id = item.id;
                 delete item.id;
+                var reg=/<[^>]+>/gim;
+                item.article_content = item.article_content.replace(reg, "");
+                item.article_content = item.article_content.slice(0,100);
                 connection.query(querySql, (err, result2) => {
                     if (err) return reject();
                     if (result2.length > 0) {

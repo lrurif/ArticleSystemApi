@@ -4,7 +4,8 @@ const connection = require('./mysql.js')
 
 // 新增专栏
 router.post('/add', function (req, res, next) {
-  const sql = `INSERT INTO zhuanlan(zhuanlan_name,zhuanlan_img,zhuanlan_abstract) values('${req.body.title}','${req.body.img}','${req.body.abstract}')`;
+  const sql = `INSERT INTO zhuanlan(zhuanlan_name,zhuanlan_img,zhuanlan_abstract,zhuanlan_bg) values('${req.body.title}','${req.body.img}','${req.body.abstract}','${req.body.bg}')`;
+  console.log(sql)
   connection.query(sql, (err, result) => {
     if (result.affectedRows) {
       res.json({
@@ -98,10 +99,19 @@ router.post('/getZhuanlanDetail', (req, res, next) => {
 
     })
   }
+  function getArticleNum(data) {
+    return new Promise((resolve, reject) => {
+      var sql = `SELECT count(*) as num from article where zhuanlan_id = '${req.body.id}'`;
+      connection.query(sql, (err, result) => {
+        data.article_num = result[0].num;
+        resolve(data);
+      })
+
+    })
+  }
   function isFocus(data) {
     return new Promise((resolve, reject) => {
       var sql = `SELECT  * from focus_zhuanlan where focus_zhuanlan_id = '${req.body.id}' and user_id = ${req.body.user_id}`;
-      console.log(sql)
       connection.query(sql, (err, result) => {
         data.isFocus = result.length > 0 ? true : false;
         resolve(data);
@@ -113,6 +123,7 @@ router.post('/getZhuanlanDetail', (req, res, next) => {
     var data = {};
     data.zhuanlan = await getZhuanlan();
     await getFocusNum(data);
+    await getArticleNum(data);
     await isFocus(data);
     return data;
   }
@@ -143,7 +154,6 @@ router.post('/focus', function (req, res, next) {
 // 专栏新增文章
 router.post('/addArticle', function (req, res, next) {
   const sql = `UPDATE article SET zhuanlan_id = '${req.body.zhuanlan_id}' where article_id = '${req.body.article_id}'`;
-  console.log(sql)
   connection.query(sql, (err, result) => {
     if (result.affectedRows) {
       res.json({

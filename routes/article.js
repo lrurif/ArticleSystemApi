@@ -23,10 +23,13 @@ router.post('/getArticle', function (req, res, next) {
         if(req.body.zhuanlan_id) {
             sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and zhuanlan_id = ${req.body.zhuanlan_id} LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
         }else if(req.body.author_id){
-            sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and zhuanlan_id is null and user_id = ${req.body.author_id} LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
+            sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and user_id = ${req.body.author_id} LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
+        }else if(req.body.search_word){
+            sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and article_title like '%${req.body.search_word.trim()}%' LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
         }else {
-            sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and zhuanlan_id is null order by rand() LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
+            sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id order by rand() LIMIT 0,10`;
         }
+        console.log(sql)
         return new Promise((resolve, reject) => {
             connection.query(sql, (err, result) => {
                 resolve(result);
@@ -38,7 +41,10 @@ router.post('/getArticle', function (req, res, next) {
             if(result.length==0)resolve(result);
             result.forEach((item, index) => {
                 let querySql = `SELECT * from article_likes where article_id = ${item.article_id} And user_id = ${id}`;
-                delete item.article_content;
+                // delete item.article_content;
+                var reg=/<[^>]+>/gim;
+                item.article_content = item.article_content.replace(reg, "");
+                item.article_content = item.article_content.slice(0,100);
                 connection.query(querySql, (err, result2) => {
                     if (err) return reject();
                     if (result2.length > 0) {
@@ -71,19 +77,27 @@ router.post('/getArticle', function (req, res, next) {
         })
     }
     function getLikeNum(result) {
-        return new Promise((resolve, reject) => {
-            if(result.length==0)resolve(result);
-            result.forEach((item, index) => {
-                let querySql = `SELECT count(*) as num from article_likes where article_id = ${item.article_id}`;
-                connection.query(querySql, (err, result2) => {
-                    if (err) return reject();
-                    result[index].article_like_num = result2[0].num;
-                    if (index == result.length - 1) {
-                        return resolve(result);
-                    }
+            new Promise(resolve => {
+                if(result.length==0)resolve(result);
+            })
+            var arr = [];
+            result.forEach((item, index)=> {
+                arr.push(
+                    new Promise((resolve, reject)=> {
+                        let querySql = `SELECT count(*) as num from article_likes where article_id = ${item.article_id}`;
+                        connection.query(querySql, (err, result2) => {
+                            if (err) reject();
+                            result[index].article_like_num = result2[0].num;
+                            resolve();
+                        })
+                    })
+                )
+            })
+            return new Promise((resolve,reject)=> {
+                Promise.all(arr).then(()=> {
+                    resolve(result);
                 })
             })
-        })
 
     }
     async function getData() {
@@ -145,11 +159,40 @@ router.post('/getArticleDetail', function (req, res, next) {
             })
         })
     }
+    // 获取是否关注此作者
+    function isFocus(id) {
+        var sql = `select * from focus_person where user_id = '${req.body.userId}' and focus_person_id = '${id}'`
+        return new Promise((resolve,reject)=> {
+            connection.query(sql, (err,result)=> {
+                return resolve(!!result.length>0);
+            })
+        })
+
+    }
+    function getCollectionNum(id) {
+        var sql = `select count(*) as num from article_collection where article_id = '${id}'`
+        return new Promise((resolve,reject)=> {
+            connection.query(sql, (err,result)=> {
+                return resolve(result[0].num);
+            })
+        })
+    }
+    function getZanNum(id) {
+        var sql = `select count(*) as num from article_likes where article_id = '${id}'`
+        return new Promise((resolve,reject)=> {
+            connection.query(sql, (err,result)=> {
+                return resolve(result[0].num);
+            })
+        })
+    }
     async function getData() {
         var result;
         result = await getArticleDetail();
         result[0].isCollect = await isCollect();
         result[0].isLike = await isLike();
+        result[0].isFocus = await isFocus(result[0].user_id);
+        result[0].collectionNum = await getCollectionNum(req.body.id);
+        result[0].zanNum = await getZanNum(req.body.id);
         return result;
     }
     getData().then(data => {
@@ -173,7 +216,7 @@ router.post('/likeArticle', (req, res, next) => {
 })
 // 获取可投稿的文章
 router.post('/getContributeArticle', (req, res, next) => {
-    var sql = `select article_id,article_title,article_time from article where user_id = ${req.body.user_id} and (zhuanlan_id != ${req.body.zhuanlan_id} or zhuanlan_id is null)`;
+    var sql = `select article_id,article_title,article_time from article where user_id = ${req.body.user_id} and zhuanlan_id is null`;
     connection.query(sql, (err, result) => {
         if (err) res.json({ message: '失败' })
         res.json({
@@ -187,7 +230,6 @@ router.post('/getContributeArticle', (req, res, next) => {
 // 获取浏览历史
 router.post('/getBrowsingArticle', (req, res, next) => {
     var sql = `select article.article_title,article.article_id,browsing_history.browsing_time from article,browsing_history where browsing_history.user_id=${req.body.userId} and article.article_id = browsing_history.article_id order by browsing_time desc LIMIT ${(req.body.page - 1) * 10},${(req.body.page - 1) * 10 + 10}`;
-    console.log(sql)
     connection.query(sql, (err, result) => {
         if (err) res.json({ message: '失败' })
         res.json({
@@ -200,7 +242,6 @@ router.post('/getBrowsingArticle', (req, res, next) => {
 // 新增浏览历史或修改浏览历史时间
 router.post('/addBrowsingHistory', (req, res, next) => {
     var sql = `select * from browsing_history where user_id = ${req.body.userId} and article_id = ${req.body.articleId}`;
-    console.log(sql)
     connection.query(sql, (err, result) => {
         if (err) res.json({ message: '失败' })
         if(result.length > 0) {
@@ -252,9 +293,9 @@ router.post('/cancelCollection', (req, res, next) => {
 router.post('/getSubmitArticle', (req, res, next) => {
     var sql = "";
     if(req.body.search_word) {
-        sql = `select article_id, article_title from article where article_title like '%${req.body.search_word}%' and user_id = '${req.body.user_id}' and (zhuanlan_id != '${req.body.zhuanlan_id}' || zhuanlan_id is null)`;
+        sql = `select article_id, article_title from article where article_title like '%${req.body.search_word}%' and user_id = '${req.body.user_id}' and zhuanlan_id is null`;
     }else {
-        sql = `select article_id, article_title from article where user_id = '${req.body.user_id}' and (zhuanlan_id != '${req.body.zhuanlan_id}' || zhuanlan_id is null)`;
+        sql = `select article_id, article_title from article where user_id = '${req.body.user_id}' and zhuanlan_id is null order by rand() limit 0,3`;
     }
     console.log(sql);
     connection.query(sql, (err, result) => {
@@ -265,5 +306,94 @@ router.post('/getSubmitArticle', (req, res, next) => {
             data: result
         })
     })
+})
+// 利用id获取文章信息
+router.post('/getArticleById', function (req, res, next) {
+    function getArticleData() {
+        var sql = `select article.*,user.realName,user.avatar from user inner join article on user.id = article.user_id and article_id = ${req.body.articleId}`;
+        return new Promise((resolve, reject) => {
+            connection.query(sql, (err, result) => {
+                resolve(result);
+            })
+        })
+    }
+    function isLike(result, id) {
+        return new Promise((resolve, reject) => {
+            if(result.length==0)resolve(result);
+            result.forEach((item, index) => {
+                let querySql = `SELECT * from article_likes where article_id = ${item.article_id} And user_id = ${id}`;
+                // delete item.article_content;
+                var reg=/<[^>]+>/gim;
+                item.article_content = item.article_content.replace(reg, "");
+                connection.query(querySql, (err, result2) => {
+                    if (err) return reject();
+                    if (result2.length > 0) {
+                        result[index].isLike = true;
+                    } else {
+                        result[index].isLike = false;
+                    }
+                    if (index == result.length - 1) {
+                        return resolve(result);
+                    }
+                })
+            })
+
+        })
+    }
+    function getCommentsNum(result) {
+        return new Promise((resolve, reject) => {
+            if(result.length==0)resolve(result);
+            result.forEach((item, index) => {
+                let querySql = `SELECT count(*) as num from comments where article_id = ${item.article_id}`;
+                connection.query(querySql, (err, result2) => {
+                    if (err) return reject();
+                    result[index].comments_num = result2[0].num;
+                    if (index == result.length - 1) {
+                        return resolve(result);
+                    }
+                })
+            })
+
+        })
+    }
+    function getLikeNum(result) {
+            new Promise(resolve => {
+                if(result.length==0)resolve(result);
+            })
+            var arr = [];
+            result.forEach((item, index)=> {
+                arr.push(
+                    new Promise((resolve, reject)=> {
+                        let querySql = `SELECT count(*) as num from article_likes where article_id = ${item.article_id}`;
+                        connection.query(querySql, (err, result2) => {
+                            if (err) reject();
+                            result[index].article_like_num = result2[0].num;
+                            resolve();
+                        })
+                    })
+                )
+            })
+            return new Promise((resolve,reject)=> {
+                Promise.all(arr).then(()=> {
+                    resolve(result);
+                })
+            })
+
+    }
+    async function getData() {
+        var result = await getArticleData();
+        result = await isLike(result, -1);
+        result = await getCommentsNum(result);
+        result = await getLikeNum(result);
+        return result;
+    }
+    getData().then(data => {
+        var res2 = {};
+        res2.length = data.length;
+        res2.code = 200;
+        res2.data = data;
+        res.json(res2);
+    })
+
 })
 module.exports = router;

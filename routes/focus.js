@@ -36,7 +36,6 @@ router.post('/get_article', function (req, res, next) {
                 person_arr.push(item.focus_person_id);
             })
             var sql = `select * from article,user where (user_id in (${(person_arr.toString())}) ) and user.id = article.user_id limit 10 `
-            console.log(sql)
             connection.query(sql, (err, res) => {
                 result.articleList = res;
                 resolve(result);
@@ -112,7 +111,7 @@ router.post('/get_article', function (req, res, next) {
                 delete item.user_id;
                 delete item.userPassword;
                 delete item.sex;
-                delete item.realName;
+                // delete item.realName;
             })
             data.zhuanlanList.forEach(item=> {
                 delete item.user_id;
